@@ -10,7 +10,7 @@
 
 ---
 
-[![Demo](demo_thumbnail.gif)](demo_video.mp4)
+<video src="demo_video.mp4" controls width="100%"></video>
 
 ## What It Does
 
