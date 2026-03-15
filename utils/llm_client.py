@@ -22,9 +22,12 @@ class OllamaClient:
         try:
             resp = requests.get(f"{self.base}/api/tags", timeout=5)
             resp.raise_for_status()
-            models = [m["name"].split(":")[0] for m in resp.json().get("models", [])]
-            if self.model not in models:
-                available = ", ".join(models) if models else "none"
+            raw = resp.json().get("models", [])
+            # Match both full tag (mistral:7b-instruct-q4_0) and base name (mistral)
+            models_full = [m["name"] for m in raw]
+            models_base = [m["name"].split(":")[0] for m in raw]
+            if self.model not in models_full and self.model not in models_base:
+                available = ", ".join(models_full) if models_full else "none"
                 return False, (
                     f"Model '{self.model}' not found in Ollama. "
                     f"Run: `ollama pull {self.model}`\n"
@@ -66,7 +69,7 @@ class OllamaClient:
             f"{self.base}/api/chat",
             json=payload,
             stream=True,
-            timeout=120,
+            timeout=600,
         ) as resp:
             resp.raise_for_status()
             for line in resp.iter_lines():

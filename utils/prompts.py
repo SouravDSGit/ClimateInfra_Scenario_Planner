@@ -148,4 +148,4 @@ SCENARIO_TYPES = [
 
 HORIZONS = ["2030", "2050", "2080"]
 
-OLLAMA_MODELS = ["mistral", "llama3", "llama3.1", "llama3.2", "gemma2", "phi3"]
+OLLAMA_MODELS = ["mistral:7b-instruct-q4_0", "mistral", "llama3", "llama3.1", "llama3.2", "gemma2", "phi3"]

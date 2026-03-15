@@ -132,6 +132,7 @@ with st.sidebar:
         default=["Moderate (RCP 6.0)"],
     )
 
+    find_stations_btn = st.button("🔍 Find Nearby Stations", type="secondary", use_container_width=True)
     run_button = st.button("🚀 Fetch Data & Generate Scenarios", type="primary", use_container_width=True)
 
 
@@ -145,14 +146,13 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-if not run_button:
+if not find_stations_btn and not run_button and "stations" not in st.session_state:
     st.info(
-        "👈 **Configure your analysis in the sidebar**, then click **Fetch Data & Generate Scenarios**.\n\n"
+        "👈 **Configure your analysis in the sidebar**, then click **Find Nearby Stations**.\n\n"
         "This tool pulls real historical precipitation records from NOAA's Climate Data Online API "
         "and uses a local large language model (via Ollama) to generate structured climate resilience "
         "scenario reports — grounded in observed hydrology, not generic templates."
     )
-
     col1, col2, col3 = st.columns(3)
     with col1:
         st.markdown("**📡 Real Data**\n\nPulls actual daily precipitation records from NOAA GHCND stations near your location.")
@@ -183,68 +183,101 @@ if errors:
 
 
 # ─────────────────────────────────────────────
-# Step 1: Check Ollama availability
-# ─────────────────────────────────────────────
-st.markdown("## 📡 Step 1 — Data Acquisition")
-
-llm = OllamaClient(model=model_choice)
-with st.spinner(f"Checking Ollama ({model_choice})..."):
-    ok, msg = llm.is_available()
-
-if not ok:
-    st.error(f"**Ollama unavailable:** {msg}")
-    st.stop()
-
-st.success(f"✅ Ollama running — model `{model_choice}` ready")
-
-
-# ─────────────────────────────────────────────
-# Step 2: Geocode location
+# Phase 1: Geocode + find stations
+# Runs only when Find Stations is clicked OR
+# location changes (clears cached state)
 # ─────────────────────────────────────────────
 noaa = NOAAClient(token=noaa_token)
 
-with st.spinner(f"Geocoding '{location_input}'..."):
-    try:
-        geo = noaa.geocode(location_input)
-    except Exception as e:
-        st.error(f"Geocoding failed: {e}")
-        st.stop()
+# Clear cache if location changed
+if st.session_state.get("last_location") != location_input:
+    for key in ["geo", "stations", "df", "stats"]:
+        st.session_state.pop(key, None)
 
-st.success(f"📍 Location resolved: **{geo['display_name'][:80]}**  (lat={geo['lat']:.4f}, lon={geo['lon']:.4f})")
+if find_stations_btn or "stations" not in st.session_state:
+    if find_stations_btn:
+        st.markdown("## 📡 Step 1 — Finding Stations")
+        with st.spinner(f"Geocoding '{location_input}'..."):
+            try:
+                st.session_state["geo"] = noaa.geocode(location_input)
+                st.session_state["last_location"] = location_input
+            except Exception as e:
+                st.error(f"Geocoding failed: {e}")
+                st.stop()
 
+        with st.spinner("Finding nearby NOAA GHCND stations..."):
+            try:
+                st.session_state["stations"] = noaa.find_stations(
+                    st.session_state["geo"]["lat"],
+                    st.session_state["geo"]["lon"]
+                )
+                # Clear old data when stations refresh
+                st.session_state.pop("df", None)
+                st.session_state.pop("stats", None)
+            except Exception as e:
+                st.error(f"Station lookup failed: {e}")
+                st.stop()
 
-# ─────────────────────────────────────────────
-# Step 3: Find NOAA stations
-# ─────────────────────────────────────────────
-with st.spinner("Finding nearby NOAA GHCND stations..."):
-    try:
-        stations = noaa.find_stations(geo["lat"], geo["lon"])
-    except Exception as e:
-        st.error(f"Station lookup failed: {e}")
-        st.stop()
+if "stations" not in st.session_state:
+    st.info("👈 Click **Find Nearby Stations** to begin.")
+    st.stop()
 
-station_options = {f"{s['name']} ({s['id']}) — {s.get('datacoverage', 0)*100:.0f}% coverage": s for s in stations}
+# Show geocode result
+geo = st.session_state["geo"]
+st.markdown("## 📡 Step 1 — Data Acquisition")
+st.success(f"📍 **{geo['display_name'][:80]}**  (lat={geo['lat']:.4f}, lon={geo['lon']:.4f})")
+
+# Station dropdown — changing this does NOT re-trigger geocoding or station search
+station_options = {
+    f"{s['name']} ({s['id']}) — {s.get('datacoverage', 0)*100:.0f}% coverage": s
+    for s in st.session_state["stations"]
+}
 chosen_label = st.selectbox(
     "Select NOAA Station",
     list(station_options.keys()),
     help="Choose the station with highest data coverage and closest to your site",
+    key="station_select",
 )
 chosen_station = station_options[chosen_label]
 station_id = chosen_station["id"]
 station_name = chosen_station["name"]
 
+# Clear cached data if user picks a different station
+if st.session_state.get("last_station_id") != station_id:
+    st.session_state.pop("df", None)
+    st.session_state.pop("stats", None)
+
 
 # ─────────────────────────────────────────────
-# Step 4: Fetch precipitation data
+# Phase 2: Fetch data + generate scenarios
+# Only runs when Fetch & Generate is clicked
 # ─────────────────────────────────────────────
-with st.spinner(f"Fetching daily precipitation records from {data_start_year}… (this may take 20–60s)"):
-    try:
-        df = noaa.fetch_daily_precip(station_id, start_year=data_start_year)
-    except Exception as e:
-        st.error(f"Data fetch failed: {e}")
+if not run_button and "df" not in st.session_state:
+    st.info("👆 Station selected. Now click **🚀 Fetch Data & Generate Scenarios** in the sidebar.")
+    st.stop()
+
+if run_button or "df" not in st.session_state:
+    # Check Ollama first
+    llm = OllamaClient(model=model_choice)
+    with st.spinner(f"Checking Ollama ({model_choice})..."):
+        ok, msg = llm.is_available()
+    if not ok:
+        st.error(f"**Ollama unavailable:** {msg}")
         st.stop()
+    st.success(f"✅ Ollama running — model `{model_choice}` ready")
 
-stats = noaa.compute_stats(df)
+    with st.spinner(f"Fetching daily precipitation records from {data_start_year}… (this may take 20–60s)"):
+        try:
+            df = noaa.fetch_daily_precip(station_id, start_year=data_start_year)
+            st.session_state["df"] = df
+            st.session_state["stats"] = noaa.compute_stats(df)
+            st.session_state["last_station_id"] = station_id
+        except Exception as e:
+            st.error(f"Data fetch failed: {e}")
+            st.stop()
+
+df = st.session_state["df"]
+stats = st.session_state["stats"]
 
 st.success(f"✅ Fetched **{len(df):,} daily records** from {stats['year_range']} ({stats['n_years']} years)")
 
@@ -295,22 +328,22 @@ fig_annual.update_layout(
 )
 st.plotly_chart(fig_annual, use_container_width=True)
 
-# Extreme events distribution
-with st.expander("📈 Extreme Event Distribution"):
-    fig_hist = px.histogram(
-        df[df["precip_in"] > 0],
-        x="precip_in",
-        nbins=60,
-        title="Distribution of Wet-Day Precipitation",
-        labels={"precip_in": "Daily Precipitation (in)"},
-        color_discrete_sequence=["#1a4d7c"],
-    )
-    fig_hist.add_vline(x=stats["p95_daily_in"], line_dash="dash", line_color="orange",
-                       annotation_text="95th pctile")
-    fig_hist.add_vline(x=stats["p99_daily_in"], line_dash="dash", line_color="red",
-                       annotation_text="99th pctile")
-    fig_hist.update_layout(height=280, margin=dict(t=50, b=30))
-    st.plotly_chart(fig_hist, use_container_width=True)
+# Extreme events distribution — always visible
+st.markdown("#### 📈 Extreme Event Distribution")
+fig_hist = px.histogram(
+    df[df["precip_in"] > 0],
+    x="precip_in",
+    nbins=60,
+    title="Distribution of Wet-Day Precipitation",
+    labels={"precip_in": "Daily Precipitation (in)"},
+    color_discrete_sequence=["#1a4d7c"],
+)
+fig_hist.add_vline(x=stats["p95_daily_in"], line_dash="dash", line_color="orange",
+                   annotation_text="95th pctile")
+fig_hist.add_vline(x=stats["p99_daily_in"], line_dash="dash", line_color="red",
+                   annotation_text="99th pctile")
+fig_hist.update_layout(height=280, margin=dict(t=50, b=30))
+st.plotly_chart(fig_hist, use_container_width=True)
 
 
 # ─────────────────────────────────────────────
