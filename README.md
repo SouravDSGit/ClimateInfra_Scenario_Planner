@@ -61,6 +61,9 @@ ollama pull mistral
 ollama pull llama3        # Meta Llama 3 8B
 ollama pull llama3.1      # Meta Llama 3.1 8B
 ollama pull gemma2        # Google Gemma 2 9B
+
+# If running on CPU
+ollama pull mistral:7b-instruct-q4_0
 ```
 
 ### 3. Set your NOAA token
