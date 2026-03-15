@@ -29,11 +29,9 @@ Output reports include: projected precipitation statistics, infrastructure-speci
 
 ## Screenshots
 
-| Data Dashboard                                          | Scenario Report                              |
-| ------------------------------------------------------- | -------------------------------------------- |
-| Annual precipitation trend + extreme event distribution | Structured AI-generated engineering scenario |
-
-_(Add screenshots here after running the app)_
+| Data Dashboard                                | Scenario Report                             |
+| --------------------------------------------- | ------------------------------------------- |
+| ![Dashboard](assets/screenshot_dashboard.png) | ![Scenario](assets/screenshot_scenario.png) |
 
 ---
 
