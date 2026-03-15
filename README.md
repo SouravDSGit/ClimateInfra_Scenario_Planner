@@ -10,6 +10,8 @@
 
 ---
 
+[![Demo](demo_thumbnail.gif)](demo_video.mp4)
+
 ## What It Does
 
 Engineers and planners face a core challenge: **design standards assume stationarity, but climate is changing the precipitation statistics that infrastructure depends on.**
@@ -27,11 +29,11 @@ Output reports include: projected precipitation statistics, infrastructure-speci
 
 ## Screenshots
 
-| Data Dashboard | Scenario Report |
-|---|---|
+| Data Dashboard                                          | Scenario Report                              |
+| ------------------------------------------------------- | -------------------------------------------- |
 | Annual precipitation trend + extreme event distribution | Structured AI-generated engineering scenario |
 
-*(Add screenshots here after running the app)*
+_(Add screenshots here after running the app)_
 
 ---
 
@@ -120,6 +122,7 @@ User Location Input
 ### Prompt Engineering
 
 The system prompt establishes the LLM as a climate resilience engineer familiar with:
+
 - HEC-18, HDS-5, ASCE 7, FHWA design standards
 - RCP 4.5 / 6.0 / 8.5 emission pathways
 - Infrastructure failure mechanisms (scour, surcharge, embankment saturation)
@@ -131,11 +134,11 @@ The user prompt injects all real NOAA statistics as a structured table, then req
 
 ## Climate Scenarios Supported
 
-| Scenario | Pathway | Description |
-|----------|---------|-------------|
+| Scenario   | Pathway | Description                                       |
+| ---------- | ------- | ------------------------------------------------- |
 | Optimistic | RCP 4.5 | Significant emissions reduction; moderate warming |
-| Moderate | RCP 6.0 | Partial mitigation; intermediate warming |
-| Severe | RCP 8.5 | Business-as-usual; high-end warming |
+| Moderate   | RCP 6.0 | Partial mitigation; intermediate warming          |
+| Severe     | RCP 8.5 | Business-as-usual; high-end warming               |
 
 Planning horizons: **2030**, **2050**, **2080**
 
@@ -166,7 +169,7 @@ This tool is part of a broader research program on **AI-driven decision support 
 ### Related Work
 
 - [culvert-at-risk.org](https://culvert-at-risk.org) — National-scale culvert failure risk assessment
-- *[Add your publications here]*
+- _[Add your publications here]_
 
 ---
 
