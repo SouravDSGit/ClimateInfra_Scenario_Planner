@@ -10,7 +10,7 @@
 
 ---
 
-<video src="demo_video.mp4" controls width="100%"></video>
+[![Demo](https://img.youtube.com/vi/q67r80-7SyI/maxresdefault.jpg)](https://youtu.be/q67r80-7SyI)
 
 ## What It Does
 
